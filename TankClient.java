@@ -21,38 +21,34 @@ public class TankClient extends Application
     private Socket s;
     private DataInputStream dis;
     private DataOutputStream dos;
+    private ObjectInputStream ois;
+    private ObjectOutputStream oos;
     private Pane canvas;
 
     public void swim(FishHandler t)
     {
-        for(int i=0; i<FishHandler.fishes.size(); i++ )
+        for(int i=0; i<MyFish.count(); i++ )
         {
-            ImageView fish = FishHandler.fishes.get(i);
-            String f = t.getFish(i);
-
-            fish.setLayoutX(fish.getLayoutX());
+            MyFish fish = MyFish.getFish(i);
+            fish.swim();
 
             final Bounds bounds = canvas.getBoundsInLocal();
-            if (fish.getLayoutX() <= (bounds.getMinX() - fish.getLayoutX() - 100)) {
-                fish.setLayoutX(bounds.getMaxX() + 100);
-                // GUITUARN WILL CODE HERE!!!!
+            if (fish.getX()<=bounds.getMinX() || (fish.getX()+100)>=bounds.getMaxX())
+            {
                 try
                 {
-                    dos.writeUTF(f);
-                    dos.flush();
-                    FishHandler.fishes.remove(fish);
-                    t.removeFromTank(f);
+                    dos.writeUTF("continue");
+                    fish.writeObject(oos);
+                    MyFish.remove(fish);
+                    System.out.println("bye " + fish);
                 }
                 catch (IOException e)
                 {
                     e.printStackTrace();
                 }
             }
-            fish.setLayoutX(fish.getLayoutX() - 10);
         }
     }
-
-
 
     @Override
     public void start(Stage primaryStage) throws Exception
@@ -71,12 +67,16 @@ public class TankClient extends Application
         {
             dis = new DataInputStream(s.getInputStream());
             dos = new DataOutputStream(s.getOutputStream());
+            oos = new ObjectOutputStream(s.getOutputStream());
+            oos.flush();
+            ois = new ObjectInputStream(s.getInputStream());
+
 
             System.out.println("########## CLIENT-" + s.getLocalPort() + " ##########");
             System.out.println("server> " + dis.readUTF());      // display welcome message
 
 
-            FishHandler t = new FishHandler(s,dis,dos);
+            FishHandler t = new FishHandler(s,dis,dos,ois,oos);
             t.start();
 
             scene.setOnMousePressed(new EventHandler<MouseEvent>()
@@ -86,18 +86,10 @@ public class TankClient extends Application
                 {
                     if(event.isPrimaryButtonDown())
                     {
-                        Image img = null;
                         try
                         {
-                            img = new Image(new FileInputStream("D:\\CPE342 Java\\Assignment03\\src\\magikarp.gif"));
-                            ImageView fish = new ImageView(img);
-                            fish.relocate(event.getX(),event.getY());
-                            fish.setFitWidth(100);
-                            fish.setPreserveRatio(true);
-                            canvas.getChildren().addAll(fish);
-                            FishHandler.addToSystem("FISH");    // Why it not be static!!!!
-                            t.addToTank(FishHandler.fishInSystem.get(FishHandler.fishInSystem.size()-1));
-                            FishHandler.fishes.add(fish);
+                            MyFish fish = new MyFish("D:\\\\CPE342 Java\\\\Assignment03\\\\src\\\\magikarp.gif",event.getX(),event.getY());
+                            canvas.getChildren().addAll(fish.getImageView());
                         }
                         catch (FileNotFoundException e)
                         {
@@ -112,14 +104,26 @@ public class TankClient extends Application
             timeline.setCycleCount(Timeline.INDEFINITE);
             timeline.play();
 
+            primaryStage.setOnCloseRequest(event -> {
+                try
+                {
+                    dos.writeUTF("exit");
+                    s.close();
+                    dis.close();
+                    dos.close();
+                    ois.close();
+                    oos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                System.exit(0);
+            });
         }
         catch (Exception e)
         {
             s.close();
             e.printStackTrace();
         }
-
-
     }
 
     public static void main(String[] args)

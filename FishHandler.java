@@ -8,10 +8,9 @@ import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 
 public class FishHandler extends Thread
@@ -19,46 +18,18 @@ public class FishHandler extends Thread
     private Socket s;
     private DataInputStream dis;
     private DataOutputStream dos;
-    private int countFish = 0;
-    ArrayList<String> fishInTank = new ArrayList<String>();
-    static ArrayList<String> fishInSystem = new ArrayList<String>();
-    static ArrayList<ImageView> fishes = new ArrayList<ImageView>();
+    private ObjectInputStream ois;
+    private ObjectOutputStream oos;
+    private MyFish newFish = new MyFish();
+    private boolean alive = true;
 
-    public FishHandler(Socket s, DataInputStream dis, DataOutputStream dos)
+    public FishHandler(Socket s, DataInputStream dis, DataOutputStream dos, ObjectInputStream ois, ObjectOutputStream oos)
     {
         this.s = s;
         this.dis = dis;
         this.dos = dos;
-    }
-
-    public void addToTank(String fish)
-    {
-        fishInTank.add(fish);
-        System.out.println("Hi! " + fish + " = " + fishInTank.size());
-    }
-
-    public void removeFromTank(String fish)
-    {
-        fishInTank.remove(fish);
-        System.out.println("Bye! " + fish + " = " + fishInTank.size());
-    }
-
-    public String getFish(int index)
-    {
-        return fishInTank.get(index);
-    }
-
-    public static void addToSystem(String fish)
-    {
-        fish = fish + (fishInSystem.size()+1);
-        fishInSystem.add(fish);
-        System.out.println("Welcome " + fish);
-    }
-
-    public static void removeFromSystem(String fish)
-    {
-        fishInSystem.remove(fish);
-        System.out.println("Bye! " + fish);
+        this.ois = ois;
+        this.oos = oos;
     }
 
     @Override
@@ -66,23 +37,23 @@ public class FishHandler extends Thread
     {
         try
         {
-            String fish;
             while (true)
             {
-                fish = dis.readUTF();        // wait for fish
-                addToTank(fish);
-                if (fish.equals("exit"))
+                if(newFish.readObject(ois))
                 {
-                    System.out.println("Goodbye Client-" + s.getPort());
-                    break;
+                    System.out.println("gotcha! " + newFish);
                 }
-
             }
-            this.s.close();
-            this.dis.close();
-            this.dos.close();
+        }
+        catch (SocketException e)
+        {
+            System.out.println("closed");
         }
         catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        catch (ClassNotFoundException e)
         {
             e.printStackTrace();
         }

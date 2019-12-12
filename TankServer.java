@@ -1,8 +1,6 @@
 import javafx.stage.Stage;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -17,6 +15,8 @@ public class TankServer
             ServerSocket ss = new ServerSocket(port);
             DataInputStream dis;
             DataOutputStream dos;
+            ObjectInputStream ois;
+            ObjectOutputStream oos;
             Socket s = null;
 
             System.out.println("########## SERVER-" + ss.getLocalPort() + " ##########");
@@ -27,8 +27,11 @@ public class TankServer
                 System.out.println("Add new tank #" + s.getPort());
                 dis = new DataInputStream(s.getInputStream());
                 dos = new DataOutputStream(s.getOutputStream());
+                oos = new ObjectOutputStream(s.getOutputStream());
+                oos.flush();
+                ois = new ObjectInputStream(s.getInputStream());
 
-                TankHandler t = new TankHandler(s,dis,dos);
+                TankHandler t = new TankHandler(s,dis,dos,ois,oos);
                 t.start();
                 t.addTo();
             }
