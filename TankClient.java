@@ -1,12 +1,9 @@
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.scene.Scene;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
@@ -14,7 +11,6 @@ import javafx.util.Duration;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
 
 public class TankClient extends Application
 {
@@ -88,7 +84,7 @@ public class TankClient extends Application
                     {
                         try
                         {
-                            MyFish fish = new MyFish("D:\\\\CPE342 Java\\\\Assignment03\\\\src\\\\magikarp.gif",event.getX(),event.getY());
+                            MyFish fish = new MyFish("magikarp.gif",event.getX(),event.getY());
                             canvas.getChildren().addAll(fish.getImageView());
                         }
                         catch (FileNotFoundException e)
