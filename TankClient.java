@@ -1,62 +1,50 @@
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Pane;
+import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 
-public class TankClient extends Application
-{
+public class TankClient extends Application {
     private Socket s;
+    public static ArrayList<ImageView> allFishes = new ArrayList<ImageView>();
     private DataInputStream dis;
     private DataOutputStream dos;
-    private Pane canvas;
+    private ObjectInputStream ois;
+    private ObjectOutputStream oos;
+    public static Pane canvas;
 
-    public void swim(FishHandler t)
-    {
-        for(int i=0; i<FishHandler.fishes.size(); i++ )
-        {
-            ImageView fish = FishHandler.fishes.get(i);
-            String f = t.getFish(i);
-
-            fish.setLayoutX(fish.getLayoutX());
-
+    public void swim() {
+        for (int i = 0; i < allFishes.size(); i++) {
+            ImageView fishImg = allFishes.get(i);
+            fishImg.setLayoutX(fishImg.getLayoutX()+5);
             final Bounds bounds = canvas.getBoundsInLocal();
-            if (fish.getLayoutX() <= (bounds.getMinX() - fish.getLayoutX() - 100)) {
-                fish.setLayoutX(bounds.getMaxX() + 100);
-                // GUITUARN WILL CODE HERE!!!!
-                try
-                {
-                    dos.writeUTF(f);
-                    dos.flush();
-                    FishHandler.fishes.remove(fish);
-                    t.removeFromTank(f);
-                }
-                catch (IOException e)
-                {
+            if ((fishImg.getLayoutX() <= bounds.getMinX()) || (fishImg.getLayoutX() >= bounds.getMaxX()-fishImg.getFitWidth())) {
+                try {
+                    MyFish fish = MyFish.getFish(i);
+                    oos.writeObject(fish);
+                    MyFish.remove(fish);
+                    allFishes.remove(fishImg);
+                    canvas.getChildren().removeAll(fishImg);
+                    System.out.println("bye " + fish);
+                } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
-            fish.setLayoutX(fish.getLayoutX() - 10);
         }
     }
 
-
-
     @Override
-    public void start(Stage primaryStage) throws Exception
-    {
+    public void start(Stage primaryStage) throws Exception {
         String ip = "127.0.0.1";
         int port = 8001;
         s = new Socket(ip, port);
@@ -67,63 +55,61 @@ public class TankClient extends Application
         primaryStage.setScene(scene);
         primaryStage.show();
 
-        try
-        {
+        try {
             dis = new DataInputStream(s.getInputStream());
             dos = new DataOutputStream(s.getOutputStream());
+            oos = new ObjectOutputStream(s.getOutputStream());
+            // oos.flush();
+            ois = new ObjectInputStream(s.getInputStream());
 
             System.out.println("########## CLIENT-" + s.getLocalPort() + " ##########");
-            System.out.println("server> " + dis.readUTF());      // display welcome message
+            // System.out.println("server> " + dis.readUTF()); // display welcome message
 
-
-            FishHandler t = new FishHandler(s,dis,dos);
+            FishHandler t = new FishHandler(s, dis, dos, ois, oos);
             t.start();
 
-            scene.setOnMousePressed(new EventHandler<MouseEvent>()
-            {
+            scene.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override
-                public void handle(MouseEvent event)
-                {
-                    if(event.isPrimaryButtonDown())
-                    {
-                        Image img = null;
-                        try
-                        {
-                            img = new Image(new FileInputStream("D:\\CPE342 Java\\Assignment03\\src\\magikarp.gif"));
-                            ImageView fish = new ImageView(img);
-                            fish.relocate(event.getX(),event.getY());
-                            fish.setFitWidth(100);
-                            fish.setPreserveRatio(true);
-                            canvas.getChildren().addAll(fish);
-                            FishHandler.addToSystem("FISH");    // Why it not be static!!!!
-                            t.addToTank(FishHandler.fishInSystem.get(FishHandler.fishInSystem.size()-1));
-                            FishHandler.fishes.add(fish);
-                        }
-                        catch (FileNotFoundException e)
-                        {
-                            e.printStackTrace();
-                        }
-
+                public void handle(MouseEvent event) {
+                    if (event.isPrimaryButtonDown()) {
+                        MyFish fish = new MyFish("src\\magikarp.png");
+                        ImageView fishImg = fish.toImageView();
+                        fishImg.relocate(event.getX(), event.getY());
+                        fish.savePosition(event.getY());
+                        //fishImg.setFitWidth(100);
+                        fishImg.setPreserveRatio(true);
+                        allFishes.add(fishImg);
+                        canvas.getChildren().add(fishImg);
                     }
                 }
             });
 
-            Timeline timeline = new Timeline(new KeyFrame(Duration.millis(50), event -> swim(t)));
+            Timeline timeline = new Timeline(new KeyFrame(Duration.millis(50), event -> swim()));
             timeline.setCycleCount(Timeline.INDEFINITE);
             timeline.play();
 
-        }
-        catch (Exception e)
-        {
+            primaryStage.setOnCloseRequest(event -> {
+                try {
+                    // dos.writeUTF("exit");
+                    s.close();
+                    dis.close();
+                    dos.close();
+                    ois.close();
+                    oos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                System.exit(0);
+            });
+
+
+        } catch (Exception e) {
             s.close();
             e.printStackTrace();
         }
-
-
     }
 
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) {
         launch(args);
     }
 }
