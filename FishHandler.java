@@ -1,50 +1,45 @@
 
 import java.io.*;
-import java.net.Socket;
 import java.net.SocketException;
 
-public class FishHandler extends Thread
-{
-    private Socket s;
-    private DataInputStream dis;
-    private DataOutputStream dos;
-    private ObjectInputStream ois;
-    private ObjectOutputStream oos;
-    private MyFish newFish = new MyFish();
-    private boolean alive = true;
+import javafx.application.Platform;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.Pane;
 
-    public FishHandler(Socket s, DataInputStream dis, DataOutputStream dos, ObjectInputStream ois, ObjectOutputStream oos)
-    {
-        this.s = s;
-        this.dis = dis;
-        this.dos = dos;
+public class FishHandler extends Thread {
+    private ObjectInputStream ois;
+    private Pane canvas;
+
+    public FishHandler(ObjectInputStream ois, Pane canvas) {
+        
         this.ois = ois;
-        this.oos = oos;
+        this.canvas = canvas;
     }
 
     @Override
-    public void run()
-    {
-        try
-        {
-            while (true)
-            {
-                if(newFish.readObject(ois))
-                {
-                    System.out.println("gotcha! " + newFish);
-                }
+    public void run() {
+        try {
+            while (true) {
+                MyFish fish = (MyFish) ois.readObject();
+                ImageView fishImg = fish.toImageView();
+                fishImg.setFitWidth(100);
+                fishImg.setPreserveRatio(true);
+                fishImg.relocate(canvas.getBoundsInLocal().getMinX(), fish.getY());
+                MyFish.add(fish);
+                TankClient.allFishes.add(fishImg);
+                Platform.runLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        canvas.getChildren().add(fishImg);
+                    }
+
+                });
             }
-        }
-        catch (SocketException e)
-        {
+        } catch (SocketException e) {
             System.out.println("closed");
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             e.printStackTrace();
-        }
-        catch (ClassNotFoundException e)
-        {
+        } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
